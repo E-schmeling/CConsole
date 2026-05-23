@@ -1,0 +1,3 @@
+*build/
+examples/PicoSDK/C-Based-Console/.gitignore
+*.vscode/
