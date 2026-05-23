@@ -21,6 +21,20 @@
 // #define SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
 
 /** =======================================================================
+ *  Device-specific Defines
+ *  =======================================================================
+ */
+#include "pico/stdlib.h"
+#include "hardware/uart.h"
+
+#define UART_ID uart1
+#define BAUD_RATE 115200
+
+#define UART_TX_PIN 4
+#define UART_RX_PIN 5
+
+
+/** =======================================================================
  *  Function prototypes for internal routines
  *  =======================================================================
  */
@@ -48,18 +62,6 @@ static void cmd_bang(serial_console_t *console, const char *args);
 static void handle_tab_completion(serial_console_t *console);
 #endif
 
-/** =======================================================================
- *  Device-specific Defines
- *  =======================================================================
- */
-#include "pico/stdlib.h"
-#include "hardware/uart.h"
-
-#define UART_ID uart1
-#define BAUD_RATE 115200
-
-#define UART_TX_PIN 4
-#define UART_RX_PIN 5
 
 /** =======================================================================
  *  Global Variables

@@ -20,6 +20,14 @@
 // #define SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
 // #define SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
 
+
+/** =======================================================================
+ *  Device-specific Defines
+ *  =======================================================================
+ */
+
+
+ 
 /** =======================================================================
  *  Function prototypes for internal routines
  *  =======================================================================
@@ -48,10 +56,6 @@ static void cmd_bang(serial_console_t *console, const char *args);
 static void handle_tab_completion(serial_console_t *console);
 #endif
 
-/** =======================================================================
- *  Device-specific Defines
- *  =======================================================================
- */
 
 /** =======================================================================
  *  Global Variables
