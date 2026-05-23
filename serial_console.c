@@ -3,18 +3,30 @@
 #include <ctype.h>
 #include <stdio.h>
 
+
 // #define SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
 
 
-static void console_print_impl(const char *text) {
-    // Default platform text output should be put here.
+static void console_print_impl(const char *text)
+{
+    // Implement this function to send the text to your output.
 }
 
-static int console_getchar_impl(void) {
-    // Default platform char input should be put here.
+static int console_getchar_impl(void) 
+{
+    // Implement this function to read a character from your input.
+    return -1; // Return -1 if no character is available
 }
 
-void serial_console_init(serial_console_t *console, const command_t *commands, uint8_t num_commands) {
+static void device_specific_init(void) 
+{
+    // Implement any necessary initialization for your specific hardware here.
+}
+
+
+void serial_console_init(serial_console_t *console, const command_t *commands, uint8_t num_commands)
+{
+    device_specific_init();
     console->buffer_index = 0;
     console->commands = commands;
     console->num_commands = num_commands;
