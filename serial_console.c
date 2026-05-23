@@ -3,6 +3,9 @@
 #include <ctype.h>
 #include <stdio.h>
 
+// #define SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
+
+
 static void console_print_impl(const char *text) {
     // Default platform text output should be put here.
 }
@@ -42,6 +45,7 @@ static void cmd_help(serial_console_t *console) {
     }
 }
 
+#ifdef SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
 static void handle_tab_completion(serial_console_t *console) {
     // find token start at beginning + leading spaces
     size_t len = console->buffer_index;
@@ -123,6 +127,7 @@ static void handle_tab_completion(serial_console_t *console) {
     console_print_impl("> ");
     console_print_impl(console->input_buffer);
 }
+#endif
 
 void serial_console_update(serial_console_t *console) {
     int c = console_getchar_impl();
@@ -130,12 +135,15 @@ void serial_console_update(serial_console_t *console) {
     if (c == -1) {
         return;
     }
-    
+
+
+    #ifdef SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
     if (c == '\t') {
         handle_tab_completion(console);
         return;
     }
-
+    #endif
+    
     if (c == '\r' || c == '\n') {
         if (console->buffer_index > 0) {
             console->input_buffer[console->buffer_index] = '\0';
