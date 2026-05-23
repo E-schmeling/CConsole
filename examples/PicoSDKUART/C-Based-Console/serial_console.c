@@ -3,7 +3,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-//Pico Specific
+// Pico Specific
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 
@@ -13,32 +13,35 @@
 #define UART_TX_PIN 4
 #define UART_RX_PIN 5
 
-
-
 // #define SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
+// #define SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
 
+#ifdef SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
+static char last_command_name[128];
+static char last_command_args[128];
+static bool has_last_command = false;
+#endif
 
-static void console_print_impl(const char *text) {
+static void console_print_impl(const char *text)
+{
     uart_puts(UART_ID, text);
-
 }
 
-static int console_getchar_impl(void) 
+static int console_getchar_impl(void)
 {
-    if (uart_is_readable(UART_ID)) {
+    if (uart_is_readable(UART_ID))
+    {
         return uart_getc(UART_ID);
     }
-    return -1;  // No character available
+    return -1; // No character available
 }
 
-static void device_specific_init(void) 
+static void device_specific_init(void)
 {
     uart_init(UART_ID, BAUD_RATE);
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-    
 }
-
 
 void serial_console_init(serial_console_t *console, const command_t *commands, uint8_t num_commands)
 {
@@ -49,22 +52,28 @@ void serial_console_init(serial_console_t *console, const command_t *commands, u
     memset(console->input_buffer, 0, sizeof(console->input_buffer));
 }
 
-static void trim_string(char *str) {
+static void trim_string(char *str)
+{
     char *start = str;
     char *end = str + strlen(str) - 1;
-    
-    while (*start && isspace((unsigned char)*start)) start++;
-    while (end > start && isspace((unsigned char)*end)) end--;
-    
+
+    while (*start && isspace((unsigned char)*start))
+        start++;
+    while (end > start && isspace((unsigned char)*end))
+        end--;
+
     *(end + 1) = 0;
-    if (start != str) {
+    if (start != str)
+    {
         memmove(str, start, strlen(start) + 1);
     }
 }
 
-static void cmd_help(serial_console_t *console) {
+static void cmd_help(serial_console_t *console)
+{
     console_print_impl("=== Available Commands ===\n");
-    for (uint8_t i = 0; i < console->num_commands; i++) {
+    for (uint8_t i = 0; i < console->num_commands; i++)
+    {
         char line[256];
         snprintf(line, sizeof(line), "Command: %s\n    %s\n    Usage: %s\n", console->commands[i].name,
                  console->commands[i].help_text,
@@ -73,17 +82,95 @@ static void cmd_help(serial_console_t *console) {
     }
 }
 
+#ifdef SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
+static void save_last_command(const char *command, const char *args)
+{
+    if (!command || command[0] == '\0' || strcmp(command, "!") == 0)
+    {
+        return;
+    }
+
+    strncpy(last_command_name, command, sizeof(last_command_name));
+    last_command_name[sizeof(last_command_name) - 1] = '\0';
+
+    if (args && args[0] != '\0')
+    {
+        strncpy(last_command_args, args, sizeof(last_command_args));
+        last_command_args[sizeof(last_command_args) - 1] = '\0';
+    }
+    else
+    {
+        last_command_args[0] = '\0';
+    }
+
+    has_last_command = true;
+}
+
+static bool execute_saved_command(serial_console_t *console, const char *command, const char *args)
+{
+    if (strcmp(command, "help") == 0)
+    {
+        cmd_help(console);
+        return true;
+    }
+
+    for (uint8_t i = 0; i < console->num_commands; i++)
+    {
+        if (strcmp(command, console->commands[i].name) == 0)
+        {
+            if (console->commands[i].callback)
+            {
+                console->commands[i].callback(args);
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static void cmd_bang(serial_console_t *console, const char *args)
+{
+    (void)args;
+
+    if (!has_last_command)
+    {
+        console_print_impl("No previous command to repeat.\n");
+        return;
+    }
+
+    console_print_impl("Repeating last command: ");
+    console_print_impl(last_command_name);
+    if (last_command_args[0] != '\0')
+    {
+        console_print_impl(" ");
+        console_print_impl(last_command_args);
+    }
+    console_print_impl("\n");
+
+    const char *replay_args = last_command_args[0] ? last_command_args : NULL;
+    if (!execute_saved_command(console, last_command_name, replay_args))
+    {
+        console_print_impl("Previous command is no longer available.\n");
+    }
+}
+#endif
+
+
 #ifdef SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
-static void handle_tab_completion(serial_console_t *console) {
+static void handle_tab_completion(serial_console_t *console)
+{
     // find token start at beginning + leading spaces
     size_t len = console->buffer_index;
     size_t start = 0;
-    while (start < len && isspace((unsigned char)console->input_buffer[start])) {
+    while (start < len && isspace((unsigned char)console->input_buffer[start]))
+    {
         start++;
     }
 
     size_t token_len = len - start;
-    if (token_len == 0) {
+    if (token_len == 0)
+    {
         return;
     }
 
@@ -91,33 +178,41 @@ static void handle_tab_completion(serial_console_t *console) {
     command_t *match = NULL;
     uint8_t matches = 0;
     bool help_matches = (strncmp("help", token, token_len) == 0);
-    
+
     // Check user-defined commands
-    for (uint8_t i = 0; i < console->num_commands; i++) {
-        if (strncmp(console->commands[i].name, token, token_len) == 0) {
+    for (uint8_t i = 0; i < console->num_commands; i++)
+    {
+        if (strncmp(console->commands[i].name, token, token_len) == 0)
+        {
             matches++;
-            if (matches == 1) {
+            if (matches == 1)
+            {
                 match = (command_t *)&console->commands[i];
             }
         }
     }
-    
+
     // Include built-in help command
-    if (help_matches) {
+    if (help_matches)
+    {
         matches++;
-        if (matches == 1) {
+        if (matches == 1)
+        {
             static command_t help_cmd = {"help", "Show available commands", "help", NULL};
             match = &help_cmd;
         }
     }
 
-    if (matches == 0) {
+    if (matches == 0)
+    {
         return;
     }
 
-    if (matches == 1 && match != NULL) {
+    if (matches == 1 && match != NULL)
+    {
         size_t cmd_len = strlen(match->name);
-        if (token_len == cmd_len) {
+        if (token_len == cmd_len)
+        {
             char line[256];
             snprintf(line, sizeof(line), "\nUsage: %s\n", match->usage_text ? match->usage_text : match->name);
             console_print_impl(line);
@@ -127,7 +222,8 @@ static void handle_tab_completion(serial_console_t *console) {
         }
 
         const char *rest = match->name + token_len;
-        while (*rest && console->buffer_index < sizeof(console->input_buffer) - 1) {
+        while (*rest && console->buffer_index < sizeof(console->input_buffer) - 1)
+        {
             console->input_buffer[console->buffer_index++] = *rest;
             rest++;
         }
@@ -139,14 +235,17 @@ static void handle_tab_completion(serial_console_t *console) {
 
     // Multiple matches: show candidates
     console_print_impl("\nPossible matches:\n");
-    
-    if (help_matches) {
+
+    if (help_matches)
+    {
         console_print_impl("  help\n");
     }
-    
+
     // Show user-defined commands that match
-    for (uint8_t i = 0; i < console->num_commands; i++) {
-        if (strncmp(console->commands[i].name, token, token_len) == 0) {
+    for (uint8_t i = 0; i < console->num_commands; i++)
+    {
+        if (strncmp(console->commands[i].name, token, token_len) == 0)
+        {
             char line[80];
             snprintf(line, sizeof(line), "  %s\n", console->commands[i].name);
             console_print_impl(line);
@@ -157,85 +256,123 @@ static void handle_tab_completion(serial_console_t *console) {
 }
 #endif
 
-void serial_console_update(serial_console_t *console) {
+void serial_console_update(serial_console_t *console)
+{
     int c = console_getchar_impl();
-    
-    if (c == -1) {
+
+    if (c == -1)
+    {
         return;
     }
 
-
-    #ifdef SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
-    if (c == '\t') {
+#ifdef SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
+    if (c == '\t')
+    {
         handle_tab_completion(console);
         return;
     }
-    #endif
-    
-    if (c == '\r' || c == '\n') {
-        if (console->buffer_index > 0) {
+#endif
+
+    if (c == '\r' || c == '\n')
+    {
+        if (console->buffer_index > 0)
+        {
             console->input_buffer[console->buffer_index] = '\0';
-            
+
             trim_string(console->input_buffer);
-            
+
             console_print_impl("\n");
-            
+
             char *command = console->input_buffer;
             char *args = strstr(console->input_buffer, " ");
-            if (args) {
+            if (args)
+            {
                 *args = '\0';
                 args++;
                 trim_string(args);
             }
-            
-            if (strcmp(command, "help") == 0) {
+
+            if (strcmp(command, "help") == 0)
+            {
                 cmd_help(console);
-            } else {
+            
+                #ifdef SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
+                save_last_command(command, args);
+                #endif
+            
+            }
+
+            #ifdef SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
+            else if (strcmp(command, "!") == 0)
+            {
+                cmd_bang(console, args);
+            }
+            #endif
+
+            else
+            {
                 bool found = false;
-                for (uint8_t i = 0; i < console->num_commands; i++) {
-                    if (strcmp(command, console->commands[i].name) == 0) {
-                        if (console->commands[i].callback) {
+                for (uint8_t i = 0; i < console->num_commands; i++)
+                {
+                    if (strcmp(command, console->commands[i].name) == 0)
+                    {
+                        if (console->commands[i].callback)
+                        {
                             console->commands[i].callback(args);
                         }
                         found = true;
+
                         break;
                     }
                 }
-                
-                if (!found) {
+
+                if (!found)
+                {
                     console_print_impl("Unknown command. Type 'help' for available commands.\n");
                 }
+
+                #ifdef SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
+                if (found && strcmp(command, "!") != 0)
+                {
+                    save_last_command(command, args);
+                }
+                #endif
             }
-            
+
             console->buffer_index = 0;
             memset(console->input_buffer, 0, sizeof(console->input_buffer));
             console_print_impl("> ");
         }
         return;
     }
-    
-    if (c == '\b' || c == 127) {
-        if (console->buffer_index > 0) {
+
+    if (c == '\b' || c == 127)
+    {
+        if (console->buffer_index > 0)
+        {
             console->buffer_index--;
             console->input_buffer[console->buffer_index] = '\0';
-            console_print_impl("\b \b");  // Backspace, space, backspace
+            console_print_impl("\b \b"); // Backspace, space, backspace
         }
         return;
     }
-    
-    if (console->buffer_index < sizeof(console->input_buffer) - 1 && isprint((unsigned char)c)) {
+
+    if (console->buffer_index < sizeof(console->input_buffer) - 1 && isprint((unsigned char)c))
+    {
         console->input_buffer[console->buffer_index++] = c;
         char ch[2] = {(char)c, '\0'};
-        console_print_impl(ch);  // Echo character
+        console_print_impl(ch); // Echo character
     }
 }
 
-void console_print(const char *message) {
+void console_print(const char *message)
+{
     char buf[256];
     snprintf(buf, sizeof(buf), "%s\n", message);
     console_print_impl(buf);
 }
 
-void console_print_raw(const char *message) {
+void console_print_raw(const char *message)
+{
     console_print_impl(message);
 }
