@@ -21,6 +21,34 @@
 // #define SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
 
 /** =======================================================================
+ *  Function prototypes for internal routines
+ *  =======================================================================
+ */
+static void console_print_impl(const char *text);
+
+static int16_t console_getchar_impl(void);
+
+static void device_specific_init(void);
+
+void serial_console_init(serial_console_t *console, const command_t *commands, uint8_t num_commands);
+
+static void trim_string(char *str);
+
+static void cmd_help(serial_console_t *console);
+
+#ifdef SERIAL_CONSOLE_INCLUDE_BANG_COMMAND
+static void save_last_command(const char *command, const char *args);
+
+static bool execute_saved_command(serial_console_t *console, const char *command, const char *args);
+
+static void cmd_bang(serial_console_t *console, const char *args);
+#endif
+
+#ifdef SERIAL_CONSOLE_ENABLE_TAB_COMPLETION
+static void handle_tab_completion(serial_console_t *console);
+#endif
+
+/** =======================================================================
  *  Device-specific Defines
  *  =======================================================================
  */
@@ -60,13 +88,13 @@ static void console_print_impl(const char *text)
  * @brief Non-blocking input character provider.
  *
  * Called repeatedly by `serial_console_update()` to obtain incoming input.
- * Return the next available character as an `int` (unsigned char promoted)
+ * Return the next available character as an `int16_t`
  * or `-1` when no character is currently available. Returning `-1` allows
  * the caller to continue without stalling.
  *
  * @return Next input character, or -1 if none available.
  */
-static int console_getchar_impl(void)
+static int16_t console_getchar_impl(void)
 {
     // Implement this function to read a character from your input.
     return -1; // Return -1 if no character is available
@@ -365,7 +393,7 @@ static void handle_tab_completion(serial_console_t *console)
 
 void serial_console_update(serial_console_t *console)
 {
-    int c = console_getchar_impl();
+    int16_t c = console_getchar_impl();
 
     if (c == -1)
     {
