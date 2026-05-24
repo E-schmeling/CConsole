@@ -84,7 +84,8 @@ static bool has_last_command = false;
  */
 static void console_print_impl(const char *text)
 {
-    // Implement this function to send the text to your output.
+    fputs(text, stdout);
+    fflush(stdout);
 }
 
 /**
@@ -100,8 +101,8 @@ static void console_print_impl(const char *text)
  */
 static int16_t console_getchar_impl(void)
 {
-    // Implement this function to read a character from your input.
-    return -1; // Return -1 if no character is available
+    return getchar_timeout_us(0);
+
 }
 
 /**
@@ -114,7 +115,7 @@ static int16_t console_getchar_impl(void)
  */
 static void device_specific_init(void)
 {
-    // Implement any necessary initialization for your specific hardware here.
+    return;
 }
 
 /** =======================================================================
