@@ -73,7 +73,6 @@ static bool has_last_command = false;
  */
 
 /**
- * @internal
  * @brief Low-level output routine (platform-specific).
  *
  * Implement this function to actually send `text` to the target console or
@@ -88,7 +87,6 @@ static void console_print_impl(const char *text)
 }
 
 /**
- * @internal
  * @brief Non-blocking input character provider.
  *
  * Called repeatedly by `serial_console_update()` to obtain incoming input.
@@ -105,7 +103,6 @@ static int16_t console_getchar_impl(void)
 }
 
 /**
- * @internal
  * @brief Device-specific initialization hook for the console.
  *
  * Perform any board/peripheral setup required for `console_print_impl`
